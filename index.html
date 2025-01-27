@@ -1,76 +1,252 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Heading QR Code</title>
-  <!-- Load the UMD build: -->
+  
+  <!-- Use the UMD build of qrcode so "QRCode" is exposed globally -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+  
+  <style>
+    /* Base Styles */
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 50px;
+      /* Increased margin for larger layouts */
+    }
+
+    /* Heading Styles */
+    h1 {
+      font-size: 3em; /* Increased from default */
+      margin-bottom: 40px; /* Added extra margin for two new lines */
+    }
+
+    /* Paragraph Styles */
+    p {
+      font-size: 1.5em; /* Increased from default */
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+
+    /* Heading Value Display */
+    #headingValue {
+      font-size: 2.5em; /* Increased from 2em */
+      font-weight: bold;
+      margin-top: 30px;
+    }
+
+    /* QR Code Container */
+    #qrcode {
+      margin-top: 30px;
+      /* Center the QR code */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Button Container */
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 40px; /* Increased spacing */
+    }
+
+    /* Button Styles */
+    .button-container button {
+      font-size: 2em;          /* Further increased text size */
+      padding: 25px 50px;      /* Further increased padding */
+      margin: 20px 0;          /* Further increased margin between buttons */
+      width: 300px;            /* Further increased width */
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;     /* Slightly larger border radius */
+      background-color: #4CAF50; /* Button color */
+      color: white;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Button Hover Effect */
+    .button-container button:hover {
+      background-color: #45a049;
+      transform: translateY(-3px);
+    }
+
+    /* Button Active Effect */
+    .button-container button:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Responsive QR Code Canvas */
+    #qrcode canvas {
+      width: 350px !important;  /* Increased size */
+      height: 350px !important; /* Maintained aspect ratio */
+    }
+
+    /* Media Queries for Smaller Screens */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 30px; /* Adjusted margin for smaller screens */
+      }
+      p {
+        font-size: 1.2em;
+      }
+      #headingValue {
+        font-size: 2em;
+      }
+      .button-container button {
+        font-size: 1.5em;
+        padding: 20px 40px;
+        width: 250px;
+      }
+      #qrcode canvas {
+        width: 300px !important;
+        height: 300px !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        margin: 20px;
+      }
+      h1 {
+        font-size: 2em;
+        margin-bottom: 20px; /* Adjusted margin for smaller screens */
+      }
+      p {
+        font-size: 1em;
+      }
+      #headingValue {
+        font-size: 1.5em;
+      }
+      .button-container button {
+        font-size: 1.2em;
+        padding: 15px 30px;
+        width: 200px;
+      }
+      #qrcode canvas {
+        width: 250px !important;
+        height: 250px !important;
+      }
+    }
+  </style>
 </head>
-<body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+<body>
 
   <h1>QR Code with Compass Heading</h1>
-  <p>Tap the button below to request permission and generate a QR code for your current heading.</p>
-  <button onclick="startHeading()">Start</button>
-
-  <div id="headingValue" style="margin-top: 20px; font-weight: bold;"></div>
-  <div id="qrcode" style="margin-top: 20px;"></div>
+  
+  <!-- Adding two new lines by increasing the margin-bottom of the h1 element -->
+  
+  <p>
+    Tap <strong>Start</strong> below to request permission, and display your current heading.
+  </p>
+  
+  <!-- Added an empty line by splitting into a new paragraph -->
+  <p>
+    Then tap <strong>Generate QR</strong> to create a QR code for that heading.
+  </p>
+  
+  <!-- Container to hold the buttons vertically -->
+  <div class="button-container">
+    <!-- Button to request permission and start reading heading -->
+    <button onclick="startHeading()">Start</button>
+    
+    <!-- Button to generate the QR code when desired -->
+    <button onclick="generateQRCodeForCurrentHeading()">Generate QR</button>
+  </div>
+  
+  <!-- Show the heading value here -->
+  <div id="headingValue">Heading not started.</div>
+  
+  <!-- The QR code canvas will appear here -->
+  <div id="qrcode"></div>
 
   <script>
-    let headingDisplay = document.getElementById("headingValue");
-    let qrDiv = document.getElementById("qrcode");
+    // Wait until the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", function() {
+      // Globals
+      let currentHeading = 0;
+      const headingDisplay = document.getElementById("headingValue");
+      const qrDiv = document.getElementById("qrcode");
 
-    // Request permission if needed (mainly for iOS)
-    async function requestPermission() {
-      if (
-        DeviceMotionEvent &&
-        typeof DeviceMotionEvent.requestPermission === "function"
-      ) {
-        return DeviceMotionEvent.requestPermission();
-      }
-      return Promise.resolve();
-    }
-
-    function generateQRCode(text) {
-      // Clear the QR code container
-      qrDiv.innerHTML = "";
-
-      // Use the qrcode library to generate a canvas
-      QRCode.toCanvas(text, { errorCorrectionLevel: "H" }, function (err, canvas) {
-        if (err) {
-          console.error(err);
-          return;
+      // iOS 13+ requires permission for motion data
+      async function requestPermission() {
+        if (typeof DeviceMotionEvent !== "undefined" && 
+            typeof DeviceMotionEvent.requestPermission === "function") {
+          return DeviceMotionEvent.requestPermission();
         }
-        qrDiv.appendChild(canvas);
-      });
-    }
-
-    function handleOrientation(event) {
-      let heading;
-
-      if (event.webkitCompassHeading !== undefined) {
-        heading = event.webkitCompassHeading;
-      } else {
-        heading = 360 - event.alpha;
+        return Promise.resolve();
       }
 
-      if (heading < 0) {
-        heading += 360;
+      // When device orientation changes, update currentHeading
+      function handleOrientation(event) {
+        let heading;
+        
+        // Try iOS approach first
+        if (event.webkitCompassHeading !== undefined) {
+          heading = event.webkitCompassHeading;
+        } else {
+          // Fallback for other devices
+          // Note: deviceorientation alpha is not equivalent to compass heading
+          // You might need to calculate heading based on alpha, beta, gamma
+          heading = 360 - event.alpha; 
+        }
+        
+        if (heading < 0) {
+          heading += 360;
+        }
+        
+        currentHeading = heading.toFixed(2);
+        headingDisplay.textContent = "Current Heading: " + currentHeading + "°";
       }
 
-      heading = heading.toFixed(2);
-      headingDisplay.textContent = "Current Heading: " + heading + "°";
-
-      generateQRCode("Heading: " + heading + " degrees");
-    }
-
-    async function startHeading() {
-      try {
-        await requestPermission();
-        window.addEventListener("deviceorientation", handleOrientation, true);
-      } catch (error) {
-        console.error("Permission request was rejected or error occurred", error);
+      // Set up the orientation listener
+      async function startHeading() {
+        try {
+          const permission = await requestPermission();
+          if (permission === "granted" || permission === undefined) { // permission might be undefined on non-iOS devices
+            window.addEventListener("deviceorientation", handleOrientation, true);
+            headingDisplay.textContent = "Heading started. Move your device to change heading.";
+          } else {
+            headingDisplay.textContent = "Permission denied to access heading.";
+          }
+        } catch (error) {
+          console.error("Permission was rejected or another error occurred:", error);
+          headingDisplay.textContent = "Error accessing heading data.";
+        }
       }
-    }
+
+      // Only generate the QR when user clicks "Generate QR"
+      function generateQRCodeForCurrentHeading() {
+        // Clear previous QR code
+        qrDiv.innerHTML = "";
+        
+        // Generate a QR from currentHeading
+        // Ensure the heading data is properly formatted as a string
+        const qrText = `Heading: ${currentHeading} degrees`;
+        
+        QRCode.toCanvas(
+          qrText,
+          { errorCorrectionLevel: "H" },
+          function (err, canvas) {
+            if (err) {
+              console.error(err);
+              headingDisplay.textContent = "Error generating QR code.";
+              return;
+            }
+            qrDiv.appendChild(canvas);
+          }
+        );
+      }
+
+      // Expose functions to global scope for button onclick
+      window.startHeading = startHeading;
+      window.generateQRCodeForCurrentHeading = generateQRCodeForCurrentHeading;
+    });
   </script>
 
 </body>
