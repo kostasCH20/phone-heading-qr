@@ -1,89 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Heading QR Code</title>
-  <!-- Using a CDN for qrcode library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+  <!-- Load the UMD build: -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
 </head>
 <body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
 
   <h1>QR Code with Compass Heading</h1>
   <p>Tap the button below to request permission and generate a QR code for your current heading.</p>
   <button onclick="startHeading()">Start</button>
-  
+
   <div id="headingValue" style="margin-top: 20px; font-weight: bold;"></div>
   <div id="qrcode" style="margin-top: 20px;"></div>
-  
+
   <script>
     let headingDisplay = document.getElementById("headingValue");
     let qrDiv = document.getElementById("qrcode");
 
     // Request permission if needed (mainly for iOS)
     async function requestPermission() {
-      // iOS 13+ requires a user gesture to request device orientation data
       if (
         DeviceMotionEvent &&
         typeof DeviceMotionEvent.requestPermission === "function"
       ) {
         return DeviceMotionEvent.requestPermission();
       }
-      // Otherwise, no special permission needed
       return Promise.resolve();
     }
 
     function generateQRCode(text) {
       // Clear the QR code container
       qrDiv.innerHTML = "";
-      
+
       // Use the qrcode library to generate a canvas
-      QRCode.toCanvas(
-        text,
-        { errorCorrectionLevel: "H" },
-        function (err, canvas) {
-          if (err) {
-            console.error(err);
-            return;
-          }
-          qrDiv.appendChild(canvas);
+      QRCode.toCanvas(text, { errorCorrectionLevel: "H" }, function (err, canvas) {
+        if (err) {
+          console.error(err);
+          return;
         }
-      );
+        qrDiv.appendChild(canvas);
+      });
     }
 
     function handleOrientation(event) {
-      // iOS often provides event.webkitCompassHeading (0 - 360)
-      // On Android, you might rely on event.alpha (0 - 360, but measured differently).
       let heading;
-      
-      // Try iOS approach first
+
       if (event.webkitCompassHeading !== undefined) {
         heading = event.webkitCompassHeading;
       } else {
-        // Fallback to event.alpha on other devices (though alpha isn't always a true compass heading)
-        // A simple conversion: heading = 360 - alpha if you want the same "compass" direction
         heading = 360 - event.alpha;
       }
-      
-      // Clean up heading to always be 0 - 360
+
       if (heading < 0) {
         heading += 360;
       }
 
-      heading = heading.toFixed(2); // Round to 2 decimals for readability
-      
-      // Display heading
+      heading = heading.toFixed(2);
       headingDisplay.textContent = "Current Heading: " + heading + "°";
-      
-      // Generate a QR code that encodes the heading
+
       generateQRCode("Heading: " + heading + " degrees");
     }
 
     async function startHeading() {
       try {
-        // Request permission on iOS if needed
         await requestPermission();
-
-        // Listen for device orientation changes
         window.addEventListener("deviceorientation", handleOrientation, true);
       } catch (error) {
         console.error("Permission request was rejected or error occurred", error);
